@@ -1,4 +1,27 @@
-main: main.o cache.o config.o parse.o log.o help.o
-	cc -o tinydns *.o
+CC ?= cc
+
+SRC=$(wildcard src/*.c)
+OBJ=$(SRC:.c=.o)
+
+CFLAGS?=
+CFLAGS+=-Isrc
+
+LDFLAGS?=-Isrc
+
+BIN=tinydns
+
+default: $(BIN)
+
+.c.o:
+	$(CC) $(@:.o=.c) $(CFLAGS) -c -o $@
+
+$(BIN): $(OBJ)
+	$(CC) $(LDFLAGS) $(OBJ) -o $@
+
+.PHONY: clean
 clean:
-	rm -f *.o tinydns
+	rm -f $(OBJ)
+
+.PHONY: sterile
+sterile: clean
+	rm -f $(BIN)

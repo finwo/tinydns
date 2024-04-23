@@ -1,4 +1,4 @@
-#include <malloc.h>
+#include <stdlib.h> // malloc
 #include <string.h>
 #include <arpa/inet.h> // for inet_aton
 #include <unistd.h> // for usleep, fork
