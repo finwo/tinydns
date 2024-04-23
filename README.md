@@ -16,3 +16,10 @@ This is a tiny DNS server with simple JSON config written in C.
 * for compile just run `make`
 * after install you need to write your IP address in `/etc/tinydns.conf`
 * you may also use `systemctl` for start and stop service
+
+## Attributions
+
+This project makes use of the following libraries, copied into the source
+directory:
+
+- [cofyc/argparse](https://github.com/cofyc/argparse)
