@@ -2,9 +2,16 @@
 
 #include "common.h"
 
-#define DNS_PORT 53
+#include "argparse.h"
 
-char version[] = "0.3.1";
+#define DNS_PORT 53
+#define VERSION  "0.3.1"
+
+static const char *const usages[] = {
+    "tinydns [options]",
+    NULL,
+};
+static const char *const version = "\ntinydns " VERSION "\nAuthor: CupIvan <mail@cupivan.ru>\nLicense: MIT\n";
 
 unsigned char buf[0xFFF];
 
@@ -185,32 +192,39 @@ int server_init()
   return sock;
 }
 
-int main(int argc, char **argv)
-{
-  if (argv[1] && 0 == strcmp(argv[1], "--version"))
-  {
-    printf("tinydns %s\nAuthor: CupIvan <mail@cupivan.ru>\nLicense: MIT\n", version);
+int main(int argc, const char **argv) {
+  char *config_file = NULL;
+  int flag_version  = 0;
+  int flag_daemon   = 0;
+
+  struct argparse_option options[] = {
+    OPT_HELP(),
+    /* OPT_STRING( 'c', "config" , &config_file , "Config file to load"  , NULL, 0, 0), */
+    OPT_BOOLEAN('d', "daemon" , &flag_daemon , "Run as daemon"        , NULL, 0, 0),
+    OPT_BOOLEAN('v', "version", &flag_version, "Show version and exit", NULL, 0, 0),
+    OPT_END(),
+  };
+
+  struct argparse argparse;
+  argparse_init(&argparse, options, usages, 0);
+  argparse_describe(&argparse, "\nSmall DNS server utility with flexible json-based configuration", version);
+  argc = argparse_parse(&argparse, argc, argv);
+
+  if (flag_version) {
+    printf(version);
     exit(0);
   }
 
-  if (argv[1] && 0 == strcmp(argv[1], "--help"))
-  {
-    help();
-    exit(0);
-  }
-
-  if (argv[1] && 0 == strcmp(argv[1], "-d"))
-  {
+  if (flag_daemon) {
     pid_t pid = fork();
-    if (pid < 0)
-    {
+    if (pid < 0) {
       if (pid < 0) error("Can't create daemon!");
       exit(1);
     }
     if (pid > 0) exit(0); // exit from current process
-  }
-  else
+  } else {
     config.debug_level = 1;
+  }
 
   config_load();
 

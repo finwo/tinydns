@@ -13,5 +13,3 @@ void error(char *msg);
 
 void log_s(char *msg);
 void log_b(char *prefix, void *ptr, int n);
-
-void help();
