@@ -110,7 +110,7 @@ void loop(int sockfd)
 }
 
 #include <netdb.h>
-int hostname_to_ip(char *hostname, char *ip, int len)
+int hostname_to_ip(const char *hostname, char *ip, int len)
 {
   int sockfd;
   struct addrinfo hints, *servinfo, *p;

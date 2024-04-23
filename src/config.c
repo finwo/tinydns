@@ -1,108 +1,118 @@
 #include "common.h"
 
+#include "parson.h"
+
 TConfig config = (TConfig){
   .server_ip   = "127.0.0.1",
   .dns         = "8.8.8.8",
-  .cache_time  = 6*3600
+  .cache_time  = 6*3600,
+  .debug_level = 0,
 };
 
 char rr_buf[0xFFF] = {0};
 
-char* config_param(char* s, void* res, uint type)
-{
+void config_parse_rr(JSON_Object *rr_obj) {
   THeader *rr = (THeader*)rr_buf; rr->QRCOUNT = htons(1);
-  char   *rr_ptr, *rr_dot;
-  int state = 1, x, rr_size, rr_uid = 1;
-  if (type == CONFIG_TYPE_RR) state = 6;
-  while (*s)
-  {
-    switch (state)
-    {
-      case 1: if (*s == ':') { state = (type==CONFIG_TYPE_INT)?5:2; } break;
-      case 2: if (*s == '"') { state = 3; *(char**)res = s+1; } break;
-      case 3: if (*s == '"') { state = 4; *s = 0; }             break;
-      case 4: return s;
-      case 5: if (*s >= '0' && *s <= '9') { state = 4; sscanf(s, "%d", &x); *(uint16_t*)res = x; } break;
-      // add query/answer from config
-      case 6: if (*s == ']') state = 4; if (*s == '"') { state = 7; rr_ptr = rr_dot = s; x = 0; } break;
-      case 7:
-        if (*s == '.' || *s == '"') { *rr_dot = x; rr_dot = s; x = 0; } else x++;
-        // construct question
-        if (*s == '"')
-        {
-          state = 8; *s = 0;
-          strcpy((char*)(rr + 1), rr_ptr);
-          rr->uid     = rr_uid++;
-          rr->RD      = 1;
-          rr->QR      = 0;
-          rr->RA      = 0;
-          rr->ANCOUNT = 0;
-          rr_size = sizeof(THeader) + s - rr_ptr + 1;
-          rr_buf[rr_size++] = 0x00; rr_buf[rr_size++] = 0x01; // TYPE
-          rr_buf[rr_size++] = 0x00; rr_buf[rr_size++] = 0x01; // CLASS
-          log_b("A-->", rr_buf, rr_size);
-          cache_question(rr_buf, rr_size);
-        }
-        break;
-      case 8: if (*s == '"') { state = 9; rr_ptr = s + 1; } break;
-      case 9:
-        // construct answer
-        if (*s == '"')
-        {
-          state = 6; *s = 0;
-          rr->RD      = 1;
-          rr->QR      = 1;
-          rr->RA      = 1;
-          rr->ANCOUNT = htons(1);
-          rr_buf[rr_size++] = 0xC0;
-          rr_buf[rr_size++] = 0x0C;
-          rr_buf[rr_size++] = 0x00; rr_buf[rr_size++] = 0x01; // TYPE
-          rr_buf[rr_size++] = 0x00; rr_buf[rr_size++] = 0x01; // CLASS
-          rr_buf[rr_size++] = 0x00; rr_buf[rr_size++] = 0x00; // TTL
-          rr_buf[rr_size++] = 0xAA; rr_buf[rr_size++] = 0xAA; // TTL
-          rr_buf[rr_size++] = 0x00; rr_buf[rr_size++] = 0x04; // RDLENGTH
-          inet_aton(rr_ptr, (struct in_addr *)&rr_buf[rr_size]); rr_size += 4;
-          log_b("<--A", rr_buf, rr_size);
-          cache_answer(rr_buf, rr_size);
-        }
-        break;
+  size_t entries = json_object_get_count(rr_obj);
+  int i, s, x;
+  char *dup_name;
+  char *dup_buf;
+  size_t dup_len;
+  char *dup_tok;
+
+  int rr_size, rr_uid = 1;
+
+  for( i=0 ; i<entries ; i++ ) {
+
+    // Turn "*.pizza.calzone.com" into "<1>*<5>pizza<7>calzone<3>com<0>" & copy into rr_buf
+    dup_name = strdup(json_object_get_name(rr_obj, i));
+    dup_len  = strlen(dup_name);
+    dup_buf  = calloc(dup_len + 2, sizeof(char));
+    dup_tok = strtok(dup_name, ".");
+    while(dup_tok != NULL) {
+      dup_buf[strlen(dup_buf)] = (uint8_t)strlen(dup_tok);
+      strcat(dup_buf, dup_tok);
+      dup_tok = strtok(NULL, ".");
     }
-    s++;
+    memcpy((char*)(rr+1), dup_buf, strlen(dup_buf) + 1);
+
+    // Construct question
+    rr->uid     = rr_uid++;
+    rr->RD      = 1;
+    rr->QR      = 0;
+    rr->RA      = 0;
+    rr->ANCOUNT = 0;
+    rr_size = sizeof(THeader) + strlen(dup_buf) + 1;    // header + question domain + question domain terminator
+    rr_buf[rr_size++] = 0x00; rr_buf[rr_size++] = 0x01; // TYPE
+    rr_buf[rr_size++] = 0x00; rr_buf[rr_size++] = 0x01; // CLASS
+    log_b("A-->", rr_buf, rr_size);
+    cache_question(rr_buf, rr_size);
+
+    free(dup_name);
+    free(dup_buf);
+
+    // Construct anser
+    rr->RD      = 1;
+    rr->QR      = 1;
+    rr->RA      = 1;
+    rr->ANCOUNT = htons(1);
+    rr_buf[rr_size++] = 0xC0;                           // ??
+    rr_buf[rr_size++] = 0x0C;                           // ??
+    rr_buf[rr_size++] = 0x00; rr_buf[rr_size++] = 0x01; // TYPE
+    rr_buf[rr_size++] = 0x00; rr_buf[rr_size++] = 0x01; // CLASS
+    rr_buf[rr_size++] = 0x00; rr_buf[rr_size++] = 0x00; // TTL
+    rr_buf[rr_size++] = 0xAA; rr_buf[rr_size++] = 0xAA; // TTL
+    rr_buf[rr_size++] = 0x00; rr_buf[rr_size++] = 0x04; // RDLENGTH
+    inet_aton(json_object_get_string(rr_obj, json_object_get_name(rr_obj, i)), (struct in_addr *)&rr_buf[rr_size]); rr_size += 4;
+    log_b("<--A", rr_buf, rr_size);
+    cache_answer(rr_buf, rr_size);
+
   }
-  return s;
+
 }
 
-void config_parse(char* s)
-{
-  char* ptr = s;
-  while (*ptr)
-  {
-    if (memcmp(ptr, "server_ip",   9) == 0) ptr = config_param(ptr, &config.server_ip,  CONFIG_TYPE_STRING);
-    if (memcmp(ptr, "dns",         3) == 0) ptr = config_param(ptr, &config.dns,        CONFIG_TYPE_STRING);
-    if (memcmp(ptr, "cache_time", 10) == 0) ptr = config_param(ptr, &config.cache_time, CONFIG_TYPE_INT);
-    if (memcmp(ptr, "debug_level",11) == 0) ptr = config_param(ptr, &config.debug_level,CONFIG_TYPE_INT);
-    if (memcmp(ptr, "rr",          2) == 0) ptr = config_param(ptr, NULL,               CONFIG_TYPE_RR);
-    ptr++;
+void config_parse(JSON_Value *cfg) {
+  JSON_Object     *cfg_obj = NULL;
+  JSON_Value_Type  cfg_type = json_value_get_type(cfg);
+
+  // Basic type checking
+  if (cfg_type != JSONObject) return;
+  cfg_obj = json_value_get_object(cfg);
+
+  if (json_object_has_value_of_type(cfg_obj, "server_ip", JSONString)) {
+    config.server_ip = strdup(json_object_get_string(cfg_obj, "server_ip"));
   }
+
+  if (json_object_has_value_of_type(cfg_obj, "dns", JSONString)) {
+    config.dns = strdup(json_object_get_string(cfg_obj, "dns"));
+  }
+
+  if (json_object_has_value_of_type(cfg_obj, "cache_time", JSONNumber)) {
+    config.cache_time = (uint32_t)json_object_get_number(cfg_obj, "cache_time");
+  }
+
+  if (json_object_has_value_of_type(cfg_obj, "debug_level", JSONNumber)) {
+    config.debug_level = (uint8_t)json_object_get_number(cfg_obj, "debug_level");
+  }
+
+  if (json_object_has_value_of_type(cfg_obj, "debug_level", JSONNumber)) {
+    config.debug_level = (uint8_t)json_object_get_number(cfg_obj, "debug_level");
+  }
+
+  if (json_object_has_value_of_type(cfg_obj, "rr", JSONObject)) {
+    config_parse_rr(json_object_get_object(cfg_obj, "rr"));
+  }
+
 }
 
-void config_load()
-{
-  FILE* f;
-  f = fopen("tinydns.conf", "rb");
-  if (!f)
-  f = fopen("/etc/tinydns.conf", "rb");
-  if (!f) return;
+void config_load() {
+  JSON_Value *cfg = NULL;
 
-  fseek(f, 0, SEEK_END);
-  int fsize = ftell(f);
-  rewind(f);
+  cfg = json_parse_file("tinydns.conf");
+  if (!cfg) cfg = json_parse_file("/etc/tinydns.conf");
+  if (!cfg) return;
 
-  config.data = (char*)malloc(fsize);
-  if (!config.data) error("Can't allocate memory for config!");
+  config_parse(cfg);
 
-  fread(config.data, 1, fsize, f);
-  fclose(f);
-
-  config_parse(config.data);
+  json_value_free(cfg);
 }
