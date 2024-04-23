@@ -1,5 +1,9 @@
 ## Pending
 
+### https://github.com/finwo/tinydns/pull/7
+
+- Replaces custom argument parsing by cofyc/argparse library
+
 ### https://github.com/finwo/tinydns/pull/6
 
 - Directory structure change
