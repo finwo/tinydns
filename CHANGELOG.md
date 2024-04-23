@@ -1,5 +1,10 @@
 ## Pending
 
+### https://github.com/finwo/tinydns/pull/8
+
+- Parse config using compliant json library instead of custom solution
+    **CAUTION**: breaking change
+
 ### https://github.com/finwo/tinydns/pull/7
 
 - Replaces custom argument parsing by cofyc/argparse library
