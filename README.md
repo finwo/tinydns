@@ -23,3 +23,4 @@ This project makes use of the following libraries, copied into the source
 directory:
 
 - [cofyc/argparse](https://github.com/cofyc/argparse)
+- [kgabis/parson](https://github.com/kgabis/parson)
