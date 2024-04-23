@@ -1,6 +1,6 @@
 ## Pending
 
-### https://github.com/CupIvan/tinydns/pull/7
+### https://github.com/finwo/tinydns/pull/6
 
 - Directory structure change
 - Change whitespace in code from tabs to spaces
