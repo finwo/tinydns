@@ -1,5 +1,9 @@
 ## Pending
 
+### https://github.com/finwo/tinydns/pull/16
+
+- Adds the ability to specify the configuration file to use using command-line arguments
+
 ### https://github.com/finwo/tinydns/pull/14
 
 - Adds headerguards on all header files in the project to prevent double inclusion errors
