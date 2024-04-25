@@ -2,8 +2,9 @@
 
 typedef struct TConfig
 {
-  char     *server_ip;
+  char     *bind_ip;
   char     *upstream_ip;
+  uint16_t  bind_port;
   uint16_t  upstream_port;
   uint32_t  cache_time;
   uint8_t   debug_level;
