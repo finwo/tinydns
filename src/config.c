@@ -1,5 +1,8 @@
 #include "common.h"
 
+#include <stdio.h>
+#include <stdlib.h>
+
 #include "parson.h"
 
 TConfig config = (TConfig){
@@ -126,12 +129,20 @@ void config_parse(JSON_Value *cfg) {
 
 }
 
-void config_load() {
+void config_load(const char *config_file) {
   JSON_Value *cfg = NULL;
 
-  cfg = json_parse_file("tinydns.conf");
-  if (!cfg) cfg = json_parse_file("/etc/tinydns.conf");
-  if (!cfg) return;
+  if (config_file) {
+    cfg = json_parse_file(config_file);
+    if (!cfg) {
+      fprintf(stderr, "Invalid configuration file: %s\n", config_file);
+      exit(1);
+    }
+  } else {
+    cfg = json_parse_file("tinydns.conf");
+    if (!cfg) cfg = json_parse_file("/etc/tinydns.conf");
+    if (!cfg) return;
+  }
 
   config_parse(cfg);
 

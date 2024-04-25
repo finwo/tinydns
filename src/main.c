@@ -198,7 +198,7 @@ int main(int argc, const char **argv) {
 
   struct argparse_option options[] = {
     OPT_HELP(),
-    /* OPT_STRING( 'c', "config" , &config_file , "Config file to load"  , NULL, 0, 0), */
+    OPT_STRING( 'c', "config" , &config_file , "Config file to load"  , NULL, 0, 0),
     OPT_BOOLEAN('d', "daemon" , &flag_daemon , "Run as daemon"        , NULL, 0, 0),
     OPT_BOOLEAN('v', "version", &flag_version, "Show version and exit", NULL, 0, 0),
     OPT_END(),
@@ -225,7 +225,7 @@ int main(int argc, const char **argv) {
     config.debug_level = 1;
   }
 
-  config_load();
+  config_load(config_file);
 
   int sockfd = server_init();
 
