@@ -1,5 +1,10 @@
 ## Pending
 
+### https://github.com/finwo/tinydns/pull/10
+
+- Adds alternative port support to bound address in config
+- Adds alternative port support to upstream server reference in config
+
 ### https://github.com/finwo/tinydns/pull/8
 
 - Parse config using compliant json library instead of custom solution
