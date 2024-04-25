@@ -3,10 +3,12 @@
 #include "parson.h"
 
 TConfig config = (TConfig){
-  .server_ip   = "127.0.0.1",
-  .dns         = "8.8.8.8",
-  .cache_time  = 6*3600,
-  .debug_level = 0,
+  .bind_ip       = "127.0.0.1",
+  .bind_port     = 53,
+  .upstream_ip   = "8.8.8.8",
+  .upstream_port = 53,
+  .cache_time    = 6*3600,
+  .debug_level   = 0,
 };
 
 char rr_buf[0xFFF] = {0};
@@ -75,16 +77,35 @@ void config_parse(JSON_Value *cfg) {
   JSON_Object     *cfg_obj = NULL;
   JSON_Value_Type  cfg_type = json_value_get_type(cfg);
 
+  char *str_tmp;
+  char *str_ip;
+  char *str_port;
+  uint16_t u16_port = 0;
+
   // Basic type checking
   if (cfg_type != JSONObject) return;
   cfg_obj = json_value_get_object(cfg);
 
-  if (json_object_has_value_of_type(cfg_obj, "server_ip", JSONString)) {
-    config.server_ip = strdup(json_object_get_string(cfg_obj, "server_ip"));
+  if (json_object_has_value_of_type(cfg_obj, "bind", JSONString)) {
+    str_tmp  = strdup(json_object_get_string(cfg_obj, "bind"));
+    str_ip   = strtok(str_tmp, "#");
+    str_port = strtok(NULL   , "#");
+
+    config.bind_ip = str_ip;
+
+    if (str_port) u16_port = atoi(str_port);
+    if (u16_port) config.bind_port = u16_port;
   }
 
-  if (json_object_has_value_of_type(cfg_obj, "dns", JSONString)) {
-    config.dns = strdup(json_object_get_string(cfg_obj, "dns"));
+  if (json_object_has_value_of_type(cfg_obj, "upstream", JSONString)) {
+    str_tmp  = strdup(json_object_get_string(cfg_obj, "upstream"));
+    str_ip   = strtok(str_tmp, "#");
+    str_port = strtok(NULL   , "#");
+
+    config.upstream_ip = str_ip;
+
+    if (str_port) u16_port = atoi(str_port);
+    if (u16_port) config.upstream_port = u16_port;
   }
 
   if (json_object_has_value_of_type(cfg_obj, "cache_time", JSONNumber)) {

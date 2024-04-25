@@ -4,7 +4,6 @@
 
 #include "argparse.h"
 
-#define DNS_PORT 53
 #define VERSION  "0.3.1"
 
 static const char *const usages[] = {
@@ -32,8 +31,8 @@ void loop(int sockfd)
 
   memset((char *) &out_addr, 0, sizeof(out_addr));
   out_addr.sin_family = AF_INET;
-  out_addr.sin_port   = htons(DNS_PORT);
-  inet_aton(config.dns, (struct in_addr *)&out_addr.sin_addr.s_addr);
+  out_addr.sin_port   = htons(config.upstream_port);
+  inet_aton(config.upstream_ip, (struct in_addr *)&out_addr.sin_addr.s_addr);
   out_socket = socket(AF_INET, SOCK_DGRAM, 0);
   if (out_socket < 0) error("ERROR opening socket out");
 
@@ -144,12 +143,12 @@ int server_init()
 
   // convert domain to IP
   char buf[0xFF];
-  if (hostname_to_ip(config.server_ip, buf, sizeof(buf)))
-    config.server_ip = buf;
+  if (hostname_to_ip(config.bind_ip, buf, sizeof(buf)))
+    config.bind_ip = buf;
 
   // is ipv6?
   int is_ipv6 = 0, i = 0;
-  while (config.server_ip[i]) if (config.server_ip[i++] == ':') { is_ipv6 = 1; break; }
+  while (config.bind_ip[i]) if (config.bind_ip[i++] == ':') { is_ipv6 = 1; break; }
 
   // create socket
   sock = socket(is_ipv6 ? AF_INET6 : AF_INET, SOCK_DGRAM, 0);
@@ -169,8 +168,8 @@ int server_init()
     struct sockaddr_in6 serveraddr;  /* server's addr */
     memset((char *) &serveraddr, 0, sizeof(serveraddr));
     serveraddr.sin6_family = AF_INET6;
-    serveraddr.sin6_port   = htons(DNS_PORT);
-    inet_pton(AF_INET6, config.server_ip, (struct in_addr *)&serveraddr.sin6_addr.s6_addr);
+    serveraddr.sin6_port   = htons(config.bind_port);
+    inet_pton(AF_INET6, config.bind_ip, (struct in_addr *)&serveraddr.sin6_addr.s6_addr);
     if (bind(sock, (struct sockaddr *) &serveraddr, sizeof(serveraddr)) < 0)
       error("ERROR on binding ipv6");
   }
@@ -179,14 +178,14 @@ int server_init()
     struct sockaddr_in serveraddr;  /* server's addr */
     memset((char *) &serveraddr, 0, sizeof(serveraddr));
     serveraddr.sin_family = AF_INET;
-    serveraddr.sin_port   = htons(DNS_PORT);
-    inet_aton(config.server_ip, (struct in_addr *)&serveraddr.sin_addr.s_addr);
+    serveraddr.sin_port   = htons(config.bind_port);
+    inet_aton(config.bind_ip, (struct in_addr *)&serveraddr.sin_addr.s_addr);
     if (bind(sock, (struct sockaddr *) &serveraddr, sizeof(serveraddr)) < 0)
       error("ERROR on binding ipv4");
   }
 
   char s[0xFF];
-  sprintf(s, "bind on %s:%d", config.server_ip, DNS_PORT);
+  sprintf(s, "bind on %s:%d", config.bind_ip, config.bind_port);
   log_s(s);
 
   return sock;
