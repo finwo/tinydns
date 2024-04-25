@@ -32,8 +32,8 @@ void loop(int sockfd)
 
   memset((char *) &out_addr, 0, sizeof(out_addr));
   out_addr.sin_family = AF_INET;
-  out_addr.sin_port   = htons(DNS_PORT);
-  inet_aton(config.dns, (struct in_addr *)&out_addr.sin_addr.s_addr);
+  out_addr.sin_port   = htons(config.upstream_port);
+  inet_aton(config.upstream_ip, (struct in_addr *)&out_addr.sin_addr.s_addr);
   out_socket = socket(AF_INET, SOCK_DGRAM, 0);
   if (out_socket < 0) error("ERROR opening socket out");
 
