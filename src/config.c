@@ -133,14 +133,14 @@ void config_load(const char *config_file) {
   JSON_Value *cfg = NULL;
 
   if (config_file) {
-    cfg = json_parse_file(config_file);
+    cfg = json_parse_file_with_comments(config_file);
     if (!cfg) {
       fprintf(stderr, "Invalid configuration file: %s\n", config_file);
       exit(1);
     }
   } else {
-    cfg = json_parse_file("tinydns.conf");
-    if (!cfg) cfg = json_parse_file("/etc/tinydns.conf");
+    cfg = json_parse_file_with_comments("tinydns.conf");
+    if (!cfg) cfg = json_parse_file_with_comments("/etc/tinydns.conf");
     if (!cfg) return;
   }
 

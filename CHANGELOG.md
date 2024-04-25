@@ -1,5 +1,9 @@
 ## Pending
 
+### https://github.com/finwo/tinydns/pull/17
+
+- Re-allow comments in json configuration since replacing config parser
+
 ### https://github.com/finwo/tinydns/pull/16
 
 - Adds the ability to specify the configuration file to use using command-line arguments
