@@ -1,3 +1,6 @@
+#ifndef __TINYDNS_PARSE_H__
+#define __TINYDNS_PARSE_H__
+
 #include <arpa/inet.h> // for uint16_t
 
 #define OPCODE_STANDART     0
@@ -67,3 +70,5 @@ typedef struct __attribute__((__packed__))
 } THeader;
 
 void parse_buf(THeader *buf);
+
+#endif // __TINYDNS_PARSE_H__

@@ -1,3 +1,6 @@
+#ifndef __TINYDNS_CONFIG_H__
+#define __TINYDNS_CONFIG_H__
+
 #include <stdlib.h>
 
 typedef struct TConfig
@@ -13,3 +16,5 @@ typedef struct TConfig
 extern TConfig config;
 
 void config_load();
+
+#endif // __TINYDNS_CONFIG_H__

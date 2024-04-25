@@ -1,5 +1,9 @@
 ## Pending
 
+### https://github.com/finwo/tinydns/pull/14
+
+- Adds headerguards on all header files in the project to prevent double inclusion errors
+
 ### https://github.com/finwo/tinydns/pull/10
 
 - Adds alternative port support to bound address in config
