@@ -1,3 +1,8 @@
+#ifndef __TINYDNS_CACHE_H__
+#define __TINYDNS_CACHE_H__
+
+#include <stdint.h>
+
 typedef struct TCacheItem
 {
   struct TCacheItem *next;
@@ -17,3 +22,5 @@ typedef struct TCacheItem
 int   cache_answer(void *_buf, uint16_t n);
 void* cache_question(void *buf, uint16_t n);
 void* cache_search(void *_buf, uint16_t *n);
+
+#endif // __TINYDNS_CACHE_H__

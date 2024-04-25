@@ -185,7 +185,7 @@ int server_init()
   }
 
   char s[0xFF];
-  sprintf(s, "bind on %s:%d", config.bind_ip, config.bind_port);
+  sprintf(s, "bind on %s#%d", config.bind_ip, config.bind_port);
   log_s(s);
 
   return sock;
