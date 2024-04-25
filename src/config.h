@@ -15,6 +15,6 @@ typedef struct TConfig
 
 extern TConfig config;
 
-void config_load();
+void config_load(const char *config_file);
 
 #endif // __TINYDNS_CONFIG_H__
