@@ -1,5 +1,9 @@
 ## Pending
 
+### https://github.com/finwo/tinydns/pull/20
+
+- Fixed all compiler warnings to more clearly see regressions
+
 ### https://github.com/finwo/tinydns/commit/df615c5fe123e5c4ada35f5652132a990d78aba0
 
 - Using [dep package manager][gh-dep] package manager instead of manually imported dependencies

@@ -16,17 +16,16 @@ unsigned char buf[0xFFF];
 
 void error(char *msg) { log_s(msg); perror(msg); exit(1); }
 
-void loop(int sockfd)
-{
+void loop(int sockfd) {
    int16_t  i, n;
   uint16_t  id;
   uint16_t *ans = NULL;
 
-  int                 in_addr_len;
+  socklen_t           in_addr_len;
   struct sockaddr_in6 in_addr;
 
   int                out_socket;
-  int                out_addr_len;
+  socklen_t          out_addr_len;
   struct sockaddr_in out_addr;
 
   memset((char *) &out_addr, 0, sizeof(out_addr));
@@ -36,8 +35,7 @@ void loop(int sockfd)
   out_socket = socket(AF_INET, SOCK_DGRAM, 0);
   if (out_socket < 0) error("ERROR opening socket out");
 
-  while (1)
-  {
+  while (1) {
     memset(buf, 0, sizeof(buf));
 
     // receive datagram
@@ -64,25 +62,22 @@ void loop(int sockfd)
 
     log_b("Q-->", buf, n);
 
-    if (ans = (uint16_t *)cache_search(buf, &n))
-    {
+    if ((ans = (uint16_t *)cache_search(buf, (uint16_t *)&n))) {
       ans[0] = id;
       log_b("<--C", ans, n);
-    }
-    else
+    } else {
       cache_question(buf, n);
+    }
 
     // resend to parent
-    if (!ans)
-    {
+    if (!ans) {
       out_addr_len = sizeof(out_addr);
       n = sendto(out_socket, buf, n, 0, (struct sockaddr *) &out_addr,  out_addr_len);
       if (n < 0) { log_s("ERROR in sendto");  }
 
       int ck = 0;
       uint32_t pow, i;
-      while (++ck < 13)
-      {
+      while (++ck < 13) {
         pow = 1; for (i=0; i<ck; i++) pow <<= 1;
         usleep(pow * 1000);
         n = recvfrom(out_socket, buf, sizeof(buf), MSG_DONTWAIT, (struct sockaddr *) &out_addr, &out_addr_len);
@@ -100,8 +95,7 @@ void loop(int sockfd)
     }
 
     // send answer back
-    if (ans)
-    {
+    if (ans) {
       n = sendto(sockfd, ans, n, 0, (struct sockaddr *) &in_addr, in_addr_len);
       if (n < 0) log_s("ERROR in sendto back");
     }
@@ -109,28 +103,23 @@ void loop(int sockfd)
 }
 
 #include <netdb.h>
-int hostname_to_ip(const char *hostname, char *ip, int len)
-{
-  int sockfd;
+int hostname_to_ip(const char *hostname, char *ip, int len) {
   struct addrinfo hints, *servinfo, *p;
 
   memset(&hints, 0, sizeof(hints));
   hints.ai_family = AF_UNSPEC;
   if (getaddrinfo(hostname, NULL, &hints, &servinfo) != 0) return 0;
 
-  for (p = servinfo; p != NULL; p = p->ai_next)
-  {
-    if (p->ai_family == AF_INET6)
-    {
+  for (p = servinfo; p != NULL; p = p->ai_next) {
+    if (p->ai_family == AF_INET6) {
       struct sockaddr_in6 *serveraddr = (struct sockaddr_in6 *)p->ai_addr;
       inet_ntop(AF_INET6, (struct in_addr *)&serveraddr->sin6_addr, ip, len);
       break;
-    }
-    else
-    if (p->ai_family == AF_INET)
-    {
-      struct sockaddr_in *serveraddr = (struct sockaddr_in *)p->ai_addr;
-      inet_ntop(AF_INET, (struct in_addr *)&serveraddr->sin_addr, ip, len);
+    } else {
+      if (p->ai_family == AF_INET) {
+        struct sockaddr_in *serveraddr = (struct sockaddr_in *)p->ai_addr;
+        inet_ntop(AF_INET, (struct in_addr *)&serveraddr->sin_addr, ip, len);
+      }
     }
   }
   freeaddrinfo(servinfo);
@@ -163,8 +152,7 @@ int server_init()
   setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (const void *)&optval , sizeof(optval));
 
   // bind
-  if (is_ipv6)
-  {
+  if (is_ipv6) {
     struct sockaddr_in6 serveraddr;  /* server's addr */
     memset((char *) &serveraddr, 0, sizeof(serveraddr));
     serveraddr.sin6_family = AF_INET6;
@@ -172,9 +160,7 @@ int server_init()
     inet_pton(AF_INET6, config.bind_ip, (struct in_addr *)&serveraddr.sin6_addr.s6_addr);
     if (bind(sock, (struct sockaddr *) &serveraddr, sizeof(serveraddr)) < 0)
       error("ERROR on binding ipv6");
-  }
-  else
-  {
+  } else {
     struct sockaddr_in serveraddr;  /* server's addr */
     memset((char *) &serveraddr, 0, sizeof(serveraddr));
     serveraddr.sin_family = AF_INET;
