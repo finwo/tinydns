@@ -19,7 +19,7 @@ char rr_buf[0xFFF] = {0};
 void config_parse_rr(JSON_Object *rr_obj) {
   THeader *rr = (THeader*)rr_buf; rr->QRCOUNT = htons(1);
   size_t entries = json_object_get_count(rr_obj);
-  int i, s, x;
+  int i;
   char *dup_name;
   char *dup_buf;
   size_t dup_len;
