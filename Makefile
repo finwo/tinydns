@@ -4,8 +4,8 @@ SRC=$(wildcard src/*.c)
 INCLUDES?=
 
 override CFLAGS?=
-override CFLAGS+=-Isrc
-override LDFLAGS?=-Isrc
+override CFLAGS+=-Wall -Isrc
+override LDFLAGS?=-Wall -Isrc
 
 OBJ=$(SRC:.c=.o)
 
