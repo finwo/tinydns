@@ -1,5 +1,9 @@
 ## Pending
 
+### https://github.com/finwo/tinydns/pull/21
+
+- Adds support for parallel requests instead of handling them sequentially
+
 ### https://github.com/finwo/tinydns/pull/20
 
 - Fixed all compiler warnings to more clearly see regressions
