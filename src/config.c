@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "parson.h"
+#include "kgabis/parson.h"
 
 TConfig config = (TConfig){
   .bind_ip       = "127.0.0.1",

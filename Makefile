@@ -1,12 +1,17 @@
 CC ?= cc
 
 SRC=$(wildcard src/*.c)
+INCLUDES?=
+
+override CFLAGS?=
+override CFLAGS+=-Isrc
+override LDFLAGS?=-Isrc
+
 OBJ=$(SRC:.c=.o)
 
-CFLAGS?=
-CFLAGS+=-Isrc
+include lib/.dep/config.mk
 
-LDFLAGS?=-Isrc
+override CFLAGS+=$(INCLUDES)
 
 BIN=tinydns
 

@@ -2,7 +2,7 @@
 
 #include "common.h"
 
-#include "argparse.h"
+#include "cofyc/argparse.h"
 
 #define VERSION  "0.3.1"
 
