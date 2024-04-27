@@ -1,5 +1,9 @@
 ## Pending
 
+### https://github.com/finwo/tinydns/commit/df615c5fe123e5c4ada35f5652132a990d78aba0
+
+- Using [dep package manager][gh-dep] package manager instead of manually imported dependencies
+
 ### https://github.com/finwo/tinydns/pull/17
 
 - Re-allow comments in json configuration since replacing config parser
@@ -38,3 +42,5 @@
 At this point, the project was forked from https://github.com/CupIvan/tinydns at
 https://github.com/CupIvan/tinydns/commit/4e633cf205f8b0d6a4c6de3da1edeca0b31543d2
 a.k.a. version 0.3.1
+
+[gh-dep]: https://github.com/finwo/dep

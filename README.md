@@ -2,6 +2,10 @@
 
 This is a tiny DNS server with simple JSON config written in C.
 
+## Dependencies
+
+This project relies on the [dep package manager][gh-dep] to manage it's dependencies
+
 ## Features
 
 * filesize is just only 20Kb!
@@ -24,3 +28,5 @@ directory:
 
 - [cofyc/argparse](https://github.com/cofyc/argparse)
 - [kgabis/parson](https://github.com/kgabis/parson)
+
+[gh-dep]: https://github.com/finwo/dep
