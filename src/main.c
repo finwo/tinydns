@@ -3,6 +3,7 @@
 #include "common.h"
 
 #include "cofyc/argparse.h"
+#include "finwo/poll.h"
 
 #define VERSION  "0.3.1"
 
@@ -12,12 +13,31 @@ static const char *const usages[] = {
 };
 static const char *const version = "\ntinydns " VERSION "\nAuthor: CupIvan <mail@cupivan.ru>\nLicense: MIT\n";
 
+struct ProxyClient {
+  void                *next;
+  struct sockaddr_in6  addr;
+  socklen_t            len;
+  uint16_t             id;
+};
+
+// 4KiB buffer, should be plenty as we're dealing with single-packet messages
 unsigned char buf[0xFFF];
 
 void error(char *msg) { log_s(msg); perror(msg); exit(1); }
 
 void loop(int sockfd) {
-   int16_t  i, n;
+
+  // Setup main fpoll
+  struct fpoll    *pfd = fpoll_create();
+  struct fpoll_ev *ev  = malloc(sizeof(struct fpoll_ev));
+  fpoll_add(pfd, FPOLL_IN | FPOLL_HUP, sockfd, NULL);
+
+  struct ProxyClient *clients = NULL;
+  struct ProxyClient *client;
+  struct ProxyClient *client_prev;
+
+  // Processing vars
+  int i, n;
   uint16_t  id;
   uint16_t *ans = NULL;
 
@@ -28,76 +48,114 @@ void loop(int sockfd) {
   socklen_t          out_addr_len;
   struct sockaddr_in out_addr;
 
+  // Pre-open udp socket to upstream server
   memset((char *) &out_addr, 0, sizeof(out_addr));
   out_addr.sin_family = AF_INET;
   out_addr.sin_port   = htons(config.upstream_port);
   inet_aton(config.upstream_ip, (struct in_addr *)&out_addr.sin_addr.s_addr);
   out_socket = socket(AF_INET, SOCK_DGRAM, 0);
   if (out_socket < 0) error("ERROR opening socket out");
+  fpoll_add(pfd, FPOLL_IN | FPOLL_HUP, out_socket, NULL);
 
-  while (1) {
-    memset(buf, 0, sizeof(buf));
+  while(1) {
+    // TODO: clean expired proxy client queue
+    n = fpoll_wait(pfd, ev, 1, 1000);
+    if (!n) continue;
 
-    // receive datagram
-    in_addr_len = sizeof(in_addr);
-    n = recvfrom(sockfd, buf, sizeof(buf), 0, (struct sockaddr *) &in_addr, &in_addr_len);
-    if (n < 1) continue;
+    if (ev->fd == sockfd) {
+      // Client request
 
-    // clear Additional section, becouse of EDNS: OPTION-CODE=000A add random bytes to the end of the question
-    // EDNS: https://tools.ietf.org/html/rfc2671
-    THeader* ptr = (THeader*)buf;
-    if (ptr->ARCOUNT > 0)
-    {
-      ptr->ARCOUNT = 0;
-      i = sizeof(THeader);
-      while (buf[i] && i < n) i += buf[i] + 1;
-      n = i + 1 + 4; // COMMENT: don't forget end zero and last 2 words
-    }
-    // also clear Z: it's strange, but dig util set it in 0x02
-    ptr->Z = 0;
+      // receive datagram
+      in_addr_len = sizeof(in_addr);
+      n = recvfrom(ev->fd, buf, sizeof(buf), 0, (struct sockaddr *) &in_addr, &in_addr_len);
+      if (n < 1) continue;
 
-    parse_buf((THeader*)buf);
-
-    id = *((uint16_t*)buf);
-
-    log_b("Q-->", buf, n);
-
-    if ((ans = (uint16_t *)cache_search(buf, (uint16_t *)&n))) {
-      ans[0] = id;
-      log_b("<--C", ans, n);
-    } else {
-      cache_question(buf, n);
-    }
-
-    // resend to parent
-    if (!ans) {
-      out_addr_len = sizeof(out_addr);
-      n = sendto(out_socket, buf, n, 0, (struct sockaddr *) &out_addr,  out_addr_len);
-      if (n < 0) { log_s("ERROR in sendto");  }
-
-      int ck = 0;
-      uint32_t pow, i;
-      while (++ck < 13) {
-        pow = 1; for (i=0; i<ck; i++) pow <<= 1;
-        usleep(pow * 1000);
-        n = recvfrom(out_socket, buf, sizeof(buf), MSG_DONTWAIT, (struct sockaddr *) &out_addr, &out_addr_len);
-        if (n < 0) continue;
-
-        cache_answer(buf, n);
-
-        log_b("<--P", buf, n);
-        if (id != *((uint16_t*)buf)) continue;
-
-        ans = (uint16_t*)buf;
-        break;
+      // clear Additional section, becouse of EDNS: OPTION-CODE=000A add random bytes to the end of the question
+      // EDNS: https://tools.ietf.org/html/rfc2671
+      THeader* ptr = (THeader*)buf;
+      if (ptr->ARCOUNT > 0)
+      {
+        ptr->ARCOUNT = 0;
+        i = sizeof(THeader);
+        while (buf[i] && i < n) i += buf[i] + 1;
+        n = i + 1 + 4; // COMMENT: don't forget end zero and last 2 words
       }
-      if (!ck) log_s("<--P no answer");
-    }
+      // also clear Z: it's strange, but dig util set it in 0x02
+      ptr->Z = 0;
 
-    // send answer back
-    if (ans) {
-      n = sendto(sockfd, ans, n, 0, (struct sockaddr *) &in_addr, in_addr_len);
+      parse_buf((THeader*)buf);
+
+      id = *((uint16_t*)buf);
+
+      log_b("Q-->", buf, n);
+
+      // Search cache for known response
+      if ((ans = (uint16_t *)cache_search(buf, (uint16_t *)&n))) {
+        ans[0] = id;
+        log_b("<--C", ans, n);
+      } else {
+        cache_question(buf, n);
+      }
+
+      if (ans) {
+        // Send answer back cached response
+        n = sendto(ev->fd, ans, n, 0, (struct sockaddr *) &in_addr, in_addr_len);
+        if (n < 0) log_s("ERROR in sendto back");
+      } else {
+        // Ask parent
+
+        // Add client to queue
+        client       = malloc(sizeof(struct ProxyClient));
+        client->next = clients;
+        client->id   = id;
+        client->len  = in_addr_len;
+        clients      = client;
+        memcpy(&(client->addr), &in_addr, in_addr_len);
+
+        // resend to parent
+        out_addr_len = sizeof(out_addr);
+        n = sendto(out_socket, buf, n, 0, (struct sockaddr *) &out_addr,  out_addr_len);
+        if (n < 0) { log_s("ERROR in sendto");  }
+      }
+
+    } else if (ev->fd == out_socket) {
+      // TODO: Upstream response
+
+      n = recvfrom(ev->fd, buf, sizeof(buf), MSG_DONTWAIT, (struct sockaddr *) &out_addr, &out_addr_len);
+      if (n < 0) continue;
+
+      // Look up client in queue
+      id = *((uint16_t*)buf);
+      client_prev = NULL;
+      client      = clients;
+      while(client) {
+        if (client->id == id) break;
+        client_prev = client;
+        client      = client->next;
+      }
+      if (!client) {
+        // Discard
+        continue;
+      }
+
+      // Remove found client from the list
+      if (client_prev) {
+        client_prev->next = client->next;
+      } else {
+        clients = client->next;
+      }
+
+      // Add answer to cache
+      cache_answer(buf, n);
+      log_b("<--P", buf, n);
+
+      // And respond to the client
+      in_addr_len = client->len;
+      memcpy(&in_addr, &(client->addr), in_addr_len);
+      n = sendto(sockfd, buf, n, 0, (struct sockaddr *) &in_addr, in_addr_len);
       if (n < 0) log_s("ERROR in sendto back");
+
+      free(client);
     }
   }
 }
@@ -126,8 +184,7 @@ int hostname_to_ip(const char *hostname, char *ip, int len) {
   return 1;
 }
 
-int server_init()
-{
+int server_init() {
   int sock;
 
   // convert domain to IP
